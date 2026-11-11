@@ -1,13 +1,27 @@
 // TecPro Lab, parte 2. Verifica estructura y conexiones; la animación es orientativa.
 const advancedChallenges=[];
-const codeL=(a,d,u)=>'const int sensorLuz='+a+';const int led='+d+';\nvoid setup(){pinMode(led,OUTPUT);}\nvoid loop(){int luz=analogRead(sensorLuz);if(luz<'+u+')digitalWrite(led,HIGH);else digitalWrite(led,LOW);}';
+function formatAdvancedCode(source){
+  let depth=0,line='',out=[];
+  const flush=()=>{if(line.trim())out.push('  '.repeat(Math.max(0,depth))+line.trim());line=''};
+  for(const token of source.match(/\/\/[^\n]*|\/\*[\s\S]*?\*\/|[{};\n]|[^{};\n]+/g)||[]){
+    if(token==='\n'){flush();continue}
+    if(token==='{'){line+=' {';flush();depth++;continue}
+    if(token==='}'){flush();depth=Math.max(0,depth-1);line='}';flush();continue}
+    if(token===';'){line+=';';flush();continue}
+    if(token.startsWith('//')){flush();line=token;flush();continue}
+    line+=token;
+  }
+  flush();
+  return out.join('\n').replace(/}\nelse\b/g,'} else');
+}
+const codeL=(a,d,u)=>'const int sensorLuz='+a+';const int led='+d+';\nvoid setup(){pinMode(led,OUTPUT);}\nvoid loop(){int luz=analogRead(sensorLuz);if(luz<'+u+'){digitalWrite(led,HIGH);}else{digitalWrite(led,LOW);}}';
 const codeP=(a,d)=>'const int potenciometro='+a+';const int led='+d+';\nvoid setup(){pinMode(led,OUTPUT);}\nvoid loop(){int lectura=analogRead(potenciometro);int brillo=map(lectura,0,1023,0,255);analogWrite(led,brillo);}';
-const codeB=(b,d)=>'const int boton='+b+';const int led='+d+';\nvoid setup(){pinMode(boton,INPUT);pinMode(led,OUTPUT);}\nvoid loop(){if(digitalRead(boton)==HIGH)digitalWrite(led,HIGH);else digitalWrite(led,LOW);}';
-const codeZ=(b,d)=>'const int boton='+b+';const int zumbador='+d+';\nvoid setup(){pinMode(boton,INPUT);pinMode(zumbador,OUTPUT);}\nvoid loop(){if(digitalRead(boton)==HIGH)tone(zumbador,800);else noTone(zumbador);}';
-function A(n,name,group,text,hint,parts,need,checks,code,term,vars={}){advancedChallenges.push({key:'p'+n,name,group,level:(n<38?'NIVEL 3 · ':'NIVEL 4 · ')+group.toUpperCase(),text,hint,parts,need:need||parts,checks,code,terms:[term],vars})}
+const codeB=(b,d)=>'const int boton='+b+';const int led='+d+';\nvoid setup(){pinMode(boton,INPUT);pinMode(led,OUTPUT);}\nvoid loop(){if(digitalRead(boton)==HIGH){digitalWrite(led,HIGH);}else{digitalWrite(led,LOW);}}';
+const codeZ=(b,d)=>'const int boton='+b+';const int zumbador='+d+';\nvoid setup(){pinMode(boton,INPUT);pinMode(zumbador,OUTPUT);}\nvoid loop(){if(digitalRead(boton)==HIGH){tone(zumbador,800);}else{noTone(zumbador);}}';
+function A(n,name,group,text,hint,parts,need,checks,code,term,vars={}){advancedChallenges.push({key:'p'+n,name,group,level:(n<38?'NIVEL 3 · ':'NIVEL 4 · ')+group.toUpperCase(),text,hint,parts,need:need||parts,checks,code:formatAdvancedCode(code),terms:[term],vars})}
 A(23,'Umbral invertido','Depurar','Corrige la comparación: LED D6 encendido con lectura A3 menor que 350. Prueba 200 y 700.','Usa luz<350.',[['ldr','A3'],['led','6']],null,['if(luz<350)'],codeL('A3',6,350).replace('luz<350','luz>350'),['<','Significa menor que.']);
 A(24,'Pin PWM equivocado','Depurar','El LED está en D11. Corrige la constante sin mover el cable.','led debe valer 11.',[['pot','A4'],['led','11']],null,['analogWrite(led,brillo)'],codeP('A4',9),['PWM','Regula intensidad.'],{led:'11'});
-A(25,'Alarma que no se apaga','Depurar','El zumbador suena con D4. Haz que se silencie al soltar.','Agrega else noTone(zumbador).',[['button','4'],['buzzer','8']],null,['else','noTone(zumbador)'],codeZ(4,8).replace('else noTone(zumbador);',''),['else','Ejecuta la alternativa.']);
+A(25,'Alarma que no se apaga','Depurar','El zumbador suena con D4. Haz que se silencie al soltar.','Agrega else noTone(zumbador).',[['button','4'],['buzzer','8']],null,['else','noTone(zumbador)'],codeZ(4,8).replace('else{noTone(zumbador);}',''),['else','Ejecuta la alternativa.']);
 A(26,'Escala de brillo','Depurar','Repara map: la entrada llega a 1023 y la salida PWM a 255.','El último número es 255.',[['pot','A2'],['led','3']],null,['map(lectura,0,1023,0,255)'],codeP('A2',3).replace('0,255','0,1023'),['map()','Convierte escalas.']);
 A(27,'Modo de salida','Depurar','El LED D10 está configurado como entrada. Corrige su modo.','LED necesita OUTPUT.',[['button','5'],['led','10']],null,['pinMode(led,OUTPUT)'],codeB(5,10).replace('pinMode(led,OUTPUT)','pinMode(led,INPUT)'),['OUTPUT','Prepara la salida.']);
 A(28,'Leer el pulsador','Completar','Completa la condición para que LED D11 siga al botón D5.','Usa digitalRead(boton)==HIGH.',[['button','5'],['led','11']],null,['if(digitalRead(boton)==HIGH)'],codeB(5,11).replace('digitalRead(boton)==HIGH','/* condición */'),['digitalRead()','Lee una entrada digital.']);
